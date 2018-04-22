@@ -1,0 +1,101 @@
+#!/bin/bash
+
+HYSTERESIS=6000   # in mK
+SLEEP_INTERVAL=1  # in s
+
+# set temps (in degrees C * 1000) and corresponding pwm values in ascending order and with the same amount of values
+TEMPS=( 65000 80000 90000 )
+PWMS=(      0   153   255 )
+
+# hwmon paths, hardcoded for one amdgpu card at hwmon0, adjust as needed
+FILE_PWM=/sys/class/drm/card0/device/hwmon/hwmon0/pwm1
+FILE_FANMODE=/sys/class/drm/card0/device/hwmon/hwmon0/pwm1_enable
+FILE_TEMP=/sys/class/drm/card0/device/hwmon/hwmon0/temp1_input
+# might want to use this later
+#FILE_TEMP_CRIT=/sys/class/hwmon/hwmon0/temp1_crit_hyst
+
+# checking for privileges
+if [ $UID -ne 0 ]
+then
+  echo "Writing to sysfs requires privileges, relaunch as root"
+  exit 1
+fi
+
+# set fan mode to max(0), manual(1) or auto(2)
+function set_fanmode {
+  echo "setting fan mode to $1"
+  echo $1 > $FILE_FANMODE
+}
+
+function set_pwm {
+  NEW_PWM=$1
+  OLD_PWM=$(cat $FILE_PWM)
+
+  echo "current pwm: $OLD_PWM, requested to set pwm to $NEW_PWM"
+
+  if [ $NEW_PWM -gt $OLD_PWM ] || [ -z $TEMP_AT_LAST_PWM_CHANGE ] || [ $(($(cat $FILE_TEMP) + $HYSTERESIS)) -le $TEMP_AT_LAST_PWM_CHANGE ]; then
+    echo "temp at last change was $TEMP_AT_LAST_PWM_CHANGE"
+    echo "changing pwm to $NEW_PWM"
+    echo $NEW_PWM > $FILE_PWM
+    TEMP_AT_LAST_PWM_CHANGE=$(cat $FILE_TEMP)
+  else
+    echo "not changing pwm, we just did at $TEMP_AT_LAST_PWM_CHANGE, next change when below $(($TEMP_AT_LAST_PWM_CHANGE - $HYSTERESIS))"
+  fi
+}
+
+function interpolate_pwm {
+  i=0
+  TEMP=$(cat $FILE_TEMP)
+
+  echo "current temp: $TEMP"
+
+  if [[ $TEMP -le ${TEMPS} ]]; then
+    # below first point in list, set to min speed
+    set_pwm ${PWMS[i]}
+    return
+  fi
+
+  for i in "${!TEMPS[@]}"; do
+    if [[ $i -eq $((${#TEMPS[@]}-1)) ]]; then
+      # hit last point in list, set to max speed
+      set_pwm ${PWMS[i]}
+      return
+    elif [[ $TEMP -gt ${TEMPS[$i]} ]]; then
+      continue
+    fi
+
+    # interpolate linearly
+    LOWERTEMP=${TEMPS[i-1]}
+    HIGHERTEMP=${TEMPS[i]}
+    LOWERPWM=${PWMS[i-1]}
+    HIGHERPWM=${PWMS[i]}
+    PWM=$(echo "( ( $TEMP - $LOWERTEMP ) * ( $HIGHERPWM - $LOWERPWM ) / ( $HIGHERTEMP - $LOWERTEMP ) ) + $LOWERPWM" | bc)
+    echo "interpolated pwm value for temperature $TEMP is: $PWM"
+    set_pwm ${PWM}
+    return
+  done
+}
+
+function reset_on_fail {
+  echo "exiting, resetting fan to auto control..."
+  set_fanmode 2
+  exit 1
+}
+
+# always try to reset fans on exit
+trap "reset_on_fail" SIGINT SIGTERM
+
+function run_daemon {
+  while :; do
+    interpolate_pwm
+    echo
+    sleep $SLEEP_INTERVAL
+  done
+}
+
+# set fan control to manual
+set_fanmode 1
+
+# finally start the loop
+run_daemon
+
