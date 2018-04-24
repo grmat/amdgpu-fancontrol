@@ -24,7 +24,7 @@ fi
 # set fan mode to max(0), manual(1) or auto(2)
 function set_fanmode {
   echo "setting fan mode to $1"
-  echo $1 > $FILE_FANMODE
+  echo "$1" > "$FILE_FANMODE"
 }
 
 function set_pwm {
@@ -33,13 +33,13 @@ function set_pwm {
 
   echo "current pwm: $OLD_PWM, requested to set pwm to $NEW_PWM"
 
-  if [ $NEW_PWM -gt $OLD_PWM ] || [ -z $TEMP_AT_LAST_PWM_CHANGE ] || [ $(($(cat $FILE_TEMP) + $HYSTERESIS)) -le $TEMP_AT_LAST_PWM_CHANGE ]; then
+  if [ "$NEW_PWM" -gt "$OLD_PWM" ] || [ -z "$TEMP_AT_LAST_PWM_CHANGE" ] || [ $(($(cat $FILE_TEMP) + HYSTERESIS)) -le "$TEMP_AT_LAST_PWM_CHANGE" ]; then
     echo "temp at last change was $TEMP_AT_LAST_PWM_CHANGE"
     echo "changing pwm to $NEW_PWM"
-    echo $NEW_PWM > $FILE_PWM
+    echo "$NEW_PWM" > "$FILE_PWM"
     TEMP_AT_LAST_PWM_CHANGE=$(cat $FILE_TEMP)
   else
-    echo "not changing pwm, we just did at $TEMP_AT_LAST_PWM_CHANGE, next change when below $(($TEMP_AT_LAST_PWM_CHANGE - $HYSTERESIS))"
+    echo "not changing pwm, we just did at $TEMP_AT_LAST_PWM_CHANGE, next change when below $((TEMP_AT_LAST_PWM_CHANGE - HYSTERESIS))"
   fi
 }
 
@@ -49,16 +49,16 @@ function interpolate_pwm {
 
   echo "current temp: $TEMP"
 
-  if [[ $TEMP -le ${TEMPS} ]]; then
+  if [[ $TEMP -le ${TEMPS[0]} ]]; then
     # below first point in list, set to min speed
-    set_pwm ${PWMS[i]}
+    set_pwm "${PWMS[i]}"
     return
   fi
 
   for i in "${!TEMPS[@]}"; do
     if [[ $i -eq $((${#TEMPS[@]}-1)) ]]; then
       # hit last point in list, set to max speed
-      set_pwm ${PWMS[i]}
+      set_pwm "${PWMS[i]}"
       return
     elif [[ $TEMP -gt ${TEMPS[$i]} ]]; then
       continue
@@ -71,7 +71,7 @@ function interpolate_pwm {
     HIGHERPWM=${PWMS[i]}
     PWM=$(echo "( ( $TEMP - $LOWERTEMP ) * ( $HIGHERPWM - $LOWERPWM ) / ( $HIGHERTEMP - $LOWERTEMP ) ) + $LOWERPWM" | bc)
     echo "interpolated pwm value for temperature $TEMP is: $PWM"
-    set_pwm ${PWM}
+    set_pwm "$PWM"
     return
   done
 }
