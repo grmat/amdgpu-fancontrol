@@ -14,6 +14,16 @@ FILE_TEMP=/sys/class/drm/card0/device/hwmon/hwmon0/temp1_input
 # might want to use this later
 #FILE_TEMP_CRIT=/sys/class/hwmon/hwmon0/temp1_crit_hyst
 
+# load configuration file if present
+[ -f /etc/amdgpu-fancontrol.cfg ] && . /etc/amdgpu-fancontrol.cfg
+
+# check if amount of temps and pwm values match
+if [ "${#TEMPS[@]}" -ne "${#PWMS[@]}" ]
+then
+  echo "Amount of temperature and pwm values does not match"
+  exit 1
+fi
+
 # checking for privileges
 if [ $UID -ne 0 ]
 then
