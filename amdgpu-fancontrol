@@ -9,12 +9,23 @@ function exitConfigError {
 }
 
 echo "AMDGPU-Fancontrol starting up"
-echo "${HYSTERESIS:=6000}"
-echo "${SLEEP_INTERVAL:=1}"
+echo "     Hysteresis: ${HYSTERESIS:=6000}"
+echo " Sleep Interval: ${SLEEP_INTERVAL:=1}"
 
 # set temps (in degrees C * 1000) and corresponding pwm values in ascending order and with the same amount of values
-echo "     Temp Steps: ${TEMPS:=( 65000 80000 90000 )}"
-echo "      PWM Steps: ${PWMS:=(      0   153   255 )}"
+TEMPS=${TEMPS:-( 65000 80000 90000 )}
+printf "     Temp Steps:"
+for step in ${TEMPS[@]}; do
+    degree=`expr $step / 1000`
+    printf " %3.0dC" $degree
+done
+printf "\n"
+PWMS=${PWMS:-( 65000 80000 90000 )}
+printf "      PWM Steps:"
+for step in ${PWMS[@]}; do
+    printf "  %3.0d" $step
+done
+printf "\n"
 
 # hwmon paths, hardcoded for one amdgpu card
 echo "           Path: ${HWMON:="/sys/class/drm/card0/device/hwmon/hwmon0"}"
