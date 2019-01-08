@@ -1,21 +1,28 @@
 #!/bin/bash
 
-HYSTERESIS=6000   # in mK
-SLEEP_INTERVAL=1  # in s
-
-# set temps (in degrees C * 1000) and corresponding pwm values in ascending order and with the same amount of values
-TEMPS=( 65000 80000 90000 )
-PWMS=(      0   153   255 )
-
-# hwmon paths, hardcoded for one amdgpu card at hwmon0, adjust as needed
-FILE_PWM=/sys/class/drm/card0/device/hwmon/hwmon0/pwm1
-FILE_FANMODE=/sys/class/drm/card0/device/hwmon/hwmon0/pwm1_enable
-FILE_TEMP=/sys/class/drm/card0/device/hwmon/hwmon0/temp1_input
-# might want to use this later
-#FILE_TEMP_CRIT=/sys/class/hwmon/hwmon0/temp1_crit_hyst
-
 # load configuration file if present
 [ -f /etc/amdgpu-fancontrol.cfg ] && . /etc/amdgpu-fancontrol.cfg
+
+function exitConfigError {
+    echo "Unrecoverable or unstable error in configuration. Exiting."
+    exit 2
+}
+
+echo "AMDGPU-Fancontrol starting up"
+echo "${HYSTERESIS:=6000}"
+echo "${SLEEP_INTERVAL:=1}"
+
+# set temps (in degrees C * 1000) and corresponding pwm values in ascending order and with the same amount of values
+echo "     Temp Steps: ${TEMPS:=( 65000 80000 90000 )}"
+echo "      PWM Steps: ${PWMS:=(      0   153   255 )}"
+
+# hwmon paths, hardcoded for one amdgpu card
+echo "           Path: ${HWMON:="/sys/class/drm/card0/device/hwmon/hwmon0"}"
+echo "       PWM File: ${FILE_PWM:="$HWMON/pwm1"}"
+echo "   Fanmode File: ${FILE_FANMODE:="$HWMON/pwm1_enable"}"
+echo "Temp Input File: ${FILE_TEMP:="$HWMON/temp1_input"}"
+# might want to use this later
+#echo "Crit Temp File: ${FILE_TEMP_CRIT:="$HWMON/temp1_crit_hyst"}"
 
 # check if amount of temps and pwm values match
 if [ "${#TEMPS[@]}" -ne "${#PWMS[@]}" ]
