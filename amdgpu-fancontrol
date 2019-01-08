@@ -53,6 +53,10 @@ function set_pwm {
   if [ "$NEW_PWM" -gt "$OLD_PWM" ] || [ -z "$TEMP_AT_LAST_PWM_CHANGE" ] || [ $(($(cat $FILE_TEMP) + HYSTERESIS)) -le "$TEMP_AT_LAST_PWM_CHANGE" ]; then
     echo "temp at last change was $TEMP_AT_LAST_PWM_CHANGE"
     echo "changing pwm to $NEW_PWM"
+    if [ "$(cat "$FILE_FANMODE")" != "1" ]; then
+        echo "Fan mode is not manual"
+        set_fanmode 1
+    fi
     echo "$NEW_PWM" > "$FILE_PWM"
     TEMP_AT_LAST_PWM_CHANGE=$(cat $FILE_TEMP)
   else
@@ -111,7 +115,14 @@ function run_daemon {
 }
 
 # set fan control to manual
-set_fanmode 1
+while : ; do
+    set_fanmode 1
+    if [ "$(cat $FILE_FANMODE)" = "1" ]; then
+        break
+    fi
+    echo "Fanmode did not set correctly. Going to try again in a bit..."
+    sleep 1
+done
 
 # finally start the loop
 run_daemon
