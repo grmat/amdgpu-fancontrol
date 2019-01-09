@@ -9,8 +9,8 @@ function exitConfigError {
 }
 
 echo "AMDGPU-Fancontrol starting up"
-echo "     Hysteresis: ${HYSTERESIS:=6000}"
-echo " Sleep Interval: ${SLEEP_INTERVAL:=1}"
+echo "     Hysteresis: ${HYSTERESIS:=6000} mK"  # in mK
+echo " Sleep Interval: ${SLEEP_INTERVAL:=1} s" # in s
 
 # set temps (in degrees C * 1000) and corresponding pwm values in ascending order and with the same amount of values
 TEMPS=${TEMPS:-( 65000 80000 90000 )}
@@ -20,7 +20,7 @@ for step in ${TEMPS[@]}; do
     printf " %3.0dC" $degree
 done
 printf "\n"
-PWMS=${PWMS:-( 65000 80000 90000 )}
+PWMS=${PWMS:-( 0 153 255 )}
 printf "      PWM Steps:"
 for step in ${PWMS[@]}; do
     printf "  %3.0d" $step
