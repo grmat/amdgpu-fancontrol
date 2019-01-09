@@ -3,37 +3,58 @@
 # load configuration file if present
 [ -f /etc/amdgpu-fancontrol.cfg ] && . /etc/amdgpu-fancontrol.cfg
 
-function exitConfigError {
-    echo "Unrecoverable or unstable error in configuration. Exiting."
-    exit 2
-}
-
-echo "AMDGPU-Fancontrol starting up"
-echo "     Hysteresis: ${HYSTERESIS:=6000} mK"  # in mK
-echo " Sleep Interval: ${SLEEP_INTERVAL:=1} s" # in s
+HYSTERESIS="${HYSTERESIS:-6000}"      # in mK
+SLEEP_INTERVAL="${SLEEP_INTERVAL:-1}" # in s
 
 # set temps (in degrees C * 1000) and corresponding pwm values in ascending order and with the same amount of values
-TEMPS=${TEMPS:-( 65000 80000 90000 )}
-printf "     Temp Steps:"
+TEMPS="${TEMPS:-( 65000 80000 90000 )}"
+PWMS="${PWMS:-( 0 153 255 )}"
+
+HWMON="${HWMON:-"/sys/class/drm/card0/device/hwmon/hwmon0"}"
+FILE_PWM="${FILE_PWM:-"$HWMON/pwm1"}"
+FILE_FANMODE="${FILE_FANMODE:-"$HWMON/pwm1_enable"}"
+FILE_TEMP="${FILE_TEMP:-"$HWMON/temp1_input"}"
+# might want to use this later
+# FILE_TEMP_CRIT="${FILE_TEMP_CRIT:-"$HWMON/temp1_crit_hyst"}"
+VERBOSE="${VERBOSE:-"yes"}"
+
+case ${VERBOSE,,} in
+    'y'|'yes'|'t'|'true')
+        log() {
+            echo "$1"
+        }
+        logf() {
+            format="$1"
+            shift
+            printf "$format" $*
+        }
+        ;;
+    *)
+        log() { :; }
+        logf() { :; }
+        ;;
+esac
+
+# Log the starting values for each configuration variable
+log "AMDGPU-Fancontrol starting up"
+log "     Hysteresis: ${HYSTERESIS:=6000} mK"  # in mK
+log " Sleep Interval: ${SLEEP_INTERVAL:=1} s" # in s
+logf "     Temp Steps:"
 for step in ${TEMPS[@]}; do
     degree=`expr $step / 1000`
-    printf " %3.0dC" $degree
+    logf " %3.0dC" $degree
 done
-printf "\n"
-PWMS=${PWMS:-( 0 153 255 )}
-printf "      PWM Steps:"
+logf "\n      PWM Steps:"
 for step in ${PWMS[@]}; do
-    printf "  %3.0d" $step
+    logf "  %3.0d" $step
 done
-printf "\n"
-
-# hwmon paths, hardcoded for one amdgpu card
-echo "           Path: ${HWMON:="/sys/class/drm/card0/device/hwmon/hwmon0"}"
-echo "       PWM File: ${FILE_PWM:="$HWMON/pwm1"}"
-echo "   Fanmode File: ${FILE_FANMODE:="$HWMON/pwm1_enable"}"
-echo "Temp Input File: ${FILE_TEMP:="$HWMON/temp1_input"}"
+logf "\n"
+log "           Path: ${HWMON:="/sys/class/drm/card0/device/hwmon/hwmon0"}"
+log "       PWM File: ${FILE_PWM:="$HWMON/pwm1"}"
+log "   Fanmode File: ${FILE_FANMODE:="$HWMON/pwm1_enable"}"
+log "Temp Input File: ${FILE_TEMP:="$HWMON/temp1_input"}"
 # might want to use this later
-#echo "Crit Temp File: ${FILE_TEMP_CRIT:="$HWMON/temp1_crit_hyst"}"
+# log "Crit Temp File: ${FILE_TEMP_CRIT:="$HWMON/temp1_crit_hyst"}"
 
 # check if amount of temps and pwm values match
 if [ "${#TEMPS[@]}" -ne "${#PWMS[@]}" ]
@@ -51,7 +72,7 @@ fi
 
 # set fan mode to max(0), manual(1) or auto(2)
 function set_fanmode {
-  echo "setting fan mode to $1"
+  log "setting fan mode to $1"
   echo "$1" > "$FILE_FANMODE"
 }
 
@@ -59,19 +80,19 @@ function set_pwm {
   NEW_PWM=$1
   OLD_PWM=$(cat $FILE_PWM)
 
-  echo "current pwm: $OLD_PWM, requested to set pwm to $NEW_PWM"
+  log "current pwm: $OLD_PWM, requested to set pwm to $NEW_PWM"
 
   if [ "$NEW_PWM" -gt "$OLD_PWM" ] || [ -z "$TEMP_AT_LAST_PWM_CHANGE" ] || [ $(($(cat $FILE_TEMP) + HYSTERESIS)) -le "$TEMP_AT_LAST_PWM_CHANGE" ]; then
-    echo "temp at last change was $TEMP_AT_LAST_PWM_CHANGE"
-    echo "changing pwm to $NEW_PWM"
+    log "temp at last change was $TEMP_AT_LAST_PWM_CHANGE"
+    log "changing pwm to $NEW_PWM"
     if [ "$(cat "$FILE_FANMODE")" != "1" ]; then
-        echo "Fan mode is not manual"
+        log "Fan mode is not manual"
         set_fanmode 1
     fi
     echo "$NEW_PWM" > "$FILE_PWM"
     TEMP_AT_LAST_PWM_CHANGE=$(cat $FILE_TEMP)
   else
-    echo "not changing pwm, we just did at $TEMP_AT_LAST_PWM_CHANGE, next change when below $((TEMP_AT_LAST_PWM_CHANGE - HYSTERESIS))"
+    log "not changing pwm, we just did at $TEMP_AT_LAST_PWM_CHANGE, next change when below $((TEMP_AT_LAST_PWM_CHANGE - HYSTERESIS))"
   fi
 }
 
@@ -79,7 +100,7 @@ function interpolate_pwm {
   i=0
   TEMP=$(cat $FILE_TEMP)
 
-  echo "current temp: $TEMP"
+  log "current temp: $TEMP"
 
   if [[ $TEMP -le ${TEMPS[0]} ]]; then
     # below first point in list, set to min speed
@@ -102,7 +123,7 @@ function interpolate_pwm {
     LOWERPWM=${PWMS[i-1]}
     HIGHERPWM=${PWMS[i]}
     PWM=$(echo "( ( $TEMP - $LOWERTEMP ) * ( $HIGHERPWM - $LOWERPWM ) / ( $HIGHERTEMP - $LOWERTEMP ) ) + $LOWERPWM" | bc)
-    echo "interpolated pwm value for temperature $TEMP is: $PWM"
+    log "interpolated pwm value for temperature $TEMP is: $PWM"
     set_pwm "$PWM"
     return
   done
@@ -131,7 +152,7 @@ while : ; do
     if [ "$(cat $FILE_FANMODE)" = "1" ]; then
         break
     fi
-    echo "Fanmode did not set correctly. Going to try again in a bit..."
+    log "Fanmode did not set correctly. Going to try again in a bit..."
     sleep 1
 done
 
