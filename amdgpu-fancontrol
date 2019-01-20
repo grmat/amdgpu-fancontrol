@@ -42,6 +42,11 @@ function set_pwm {
   OLD_PWM=$(cat $FILE_PWM)
 
   echo "current pwm: $OLD_PWM, requested to set pwm to $NEW_PWM"
+  if [ $(cat ${FILE_FANMODE}) -ne 1 ]
+  then
+    echo "Fanmode not set to manual."
+    set_fanmode 1
+  fi
 
   if [ "$NEW_PWM" -gt "$OLD_PWM" ] || [ -z "$TEMP_AT_LAST_PWM_CHANGE" ] || [ $(($(cat $FILE_TEMP) + HYSTERESIS)) -le "$TEMP_AT_LAST_PWM_CHANGE" ]; then
     echo "temp at last change was $TEMP_AT_LAST_PWM_CHANGE"
