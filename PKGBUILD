@@ -9,7 +9,7 @@ license=('GPL')
 depends=('systemd' 'bc')
 
 source=('amdgpu-fancontrol' 'amdgpu-fancontrol.service')
-sha256sums=('7e1c4af47bdbab1bc4a239b22e1b6f10dc2338de500705eb5edae5bfe8ceedfe'
+sha256sums=('a1c10ab6aa02a8a5d160c5e89a733e9667bd094a6e89a1bf4a73ae99fcadc703'
             '509d5c2676ea0aa23918bebd1b4f5f0268b0a6a68a27650ce487dfb58f27e70c')
 
 package() {
