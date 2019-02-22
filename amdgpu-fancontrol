@@ -71,7 +71,7 @@ function interpolate_pwm {
   fi
 
   for i in "${!TEMPS[@]}"; do
-    if [[ $i -eq $((${#TEMPS[@]}-1)) ]]; then
+    if [[ $i -eq ${TEMPS[-1]} ]]; then
       # hit last point in list, set to max speed
       set_pwm "${PWMS[i]}"
       return
