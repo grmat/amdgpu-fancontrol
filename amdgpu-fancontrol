@@ -7,12 +7,13 @@ SLEEP_INTERVAL=1  # in s
 TEMPS=( 65000 80000 90000 )
 PWMS=(      0   153   255 )
 
-# hwmon paths, hardcoded for one amdgpu card at hwmon0, adjust as needed
-FILE_PWM=/sys/class/drm/card0/device/hwmon/hwmon0/pwm1
-FILE_FANMODE=/sys/class/drm/card0/device/hwmon/hwmon0/pwm1_enable
-FILE_TEMP=/sys/class/drm/card0/device/hwmon/hwmon0/temp1_input
+# hwmon paths, hardcoded for one amdgpu card, adjust as needed
+FILE_PWM=$(echo /sys/class/drm/card0/device/hwmon/hwmon?/pwm1)
+FILE_FANMODE=$(echo /sys/class/drm/card0/device/hwmon/hwmon?/pwm1_enable)
+FILE_TEMP=$(echo /sys/class/drm/card0/device/hwmon/hwmon?/temp1_input)
 # might want to use this later
-#FILE_TEMP_CRIT=/sys/class/hwmon/hwmon0/temp1_crit_hyst
+#FILE_TEMP_CRIT=$(echo /sys/class/hwmon/hwmon?/temp1_crit_hyst)
+[[ -f "$FILE_PWM" && -f "$FILE_FANMODE" && -f "$FILE_TEMP" ]] || { echo "invalid hwmon files" ; exit 1; }
 
 # load configuration file if present
 [ -f /etc/amdgpu-fancontrol.cfg ] && . /etc/amdgpu-fancontrol.cfg
