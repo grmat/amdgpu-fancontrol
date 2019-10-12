@@ -2,6 +2,7 @@
 
 HYSTERESIS=6000   # in mK
 SLEEP_INTERVAL=1  # in s
+DEBUG=true
 
 # set temps (in degrees C * 1000) and corresponding pwm values in ascending order and with the same amount of values
 TEMPS=( 65000 80000 90000 )
@@ -31,6 +32,12 @@ then
   exit 1
 fi
 
+function debug {
+  if $DEBUG; then
+    echo $1
+  fi
+}
+
 # set fan mode to max(0), manual(1) or auto(2)
 function set_fanmode {
   echo "setting fan mode to $1"
@@ -42,6 +49,7 @@ function set_pwm {
   OLD_PWM=$(cat $FILE_PWM)
 
   echo "current pwm: $OLD_PWM, requested to set pwm to $NEW_PWM"
+  debug "current pwm: $OLD_PWM, requested to set pwm to $NEW_PWM"
   if [ $(cat ${FILE_FANMODE}) -ne 1 ]
   then
     echo "Fanmode not set to manual."
@@ -49,12 +57,13 @@ function set_pwm {
   fi
 
   if [ "$NEW_PWM" -gt "$OLD_PWM" ] || [ -z "$TEMP_AT_LAST_PWM_CHANGE" ] || [ $(($(cat $FILE_TEMP) + HYSTERESIS)) -le "$TEMP_AT_LAST_PWM_CHANGE" ]; then
+    $DEBUG || echo "current temp: $TEMP"
     echo "temp at last change was $TEMP_AT_LAST_PWM_CHANGE"
     echo "changing pwm to $NEW_PWM"
     echo "$NEW_PWM" > "$FILE_PWM"
     TEMP_AT_LAST_PWM_CHANGE=$(cat $FILE_TEMP)
   else
-    echo "not changing pwm, we just did at $TEMP_AT_LAST_PWM_CHANGE, next change when below $((TEMP_AT_LAST_PWM_CHANGE - HYSTERESIS))"
+    debug "not changing pwm, we just did at $TEMP_AT_LAST_PWM_CHANGE, next change when below $((TEMP_AT_LAST_PWM_CHANGE - HYSTERESIS))"
   fi
 }
 
@@ -62,7 +71,7 @@ function interpolate_pwm {
   i=0
   TEMP=$(cat $FILE_TEMP)
 
-  echo "current temp: $TEMP"
+  debug "current temp: $TEMP"
 
   if [[ $TEMP -le ${TEMPS[0]} ]]; then
     # below first point in list, set to min speed
@@ -85,7 +94,7 @@ function interpolate_pwm {
     LOWERPWM=${PWMS[i-1]}
     HIGHERPWM=${PWMS[i]}
     PWM=$(echo "( ( $TEMP - $LOWERTEMP ) * ( $HIGHERPWM - $LOWERPWM ) / ( $HIGHERTEMP - $LOWERTEMP ) ) + $LOWERPWM" | bc)
-    echo "interpolated pwm value for temperature $TEMP is: $PWM"
+    debug "interpolated pwm value for temperature $TEMP is: $PWM"
     set_pwm "$PWM"
     return
   done
@@ -103,7 +112,7 @@ trap "reset_on_fail" SIGINT SIGTERM
 function run_daemon {
   while :; do
     interpolate_pwm
-    echo
+    debug
     sleep $SLEEP_INTERVAL
   done
 }
