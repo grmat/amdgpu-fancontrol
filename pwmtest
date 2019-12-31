@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# usage: ./pwmtest /sys/class/drm/card0/device/hwmon/hwmon?/pwm1
+
+if [ -z "$1" ]
+then echo "need pwm1 file path as argument"
+	exit -1
+fi
+
+echo requested,actual
+
+for i in {0..255}
+do
+	echo -n $i | sudo tee $1
+	echo -n ,
+	cat $1
+done
