@@ -49,7 +49,6 @@ function set_pwm {
   NEW_PWM=$1
   OLD_PWM=$(cat $FILE_PWM)
 
-  echo "current pwm: $OLD_PWM, requested to set pwm to $NEW_PWM"
   debug "current pwm: $OLD_PWM, requested to set pwm to $NEW_PWM"
   if [ $(cat ${FILE_FANMODE}) -ne 1 ]
   then
