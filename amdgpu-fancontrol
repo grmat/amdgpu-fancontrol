@@ -56,7 +56,7 @@ function set_pwm {
     set_fanmode 1
   fi
 
-  if [ "$NEW_PWM" -gt "$OLD_PWM" ] || [ -z "$TEMP_AT_LAST_PWM_CHANGE" ] || [ $(($(cat $FILE_TEMP) + HYSTERESIS)) -le "$TEMP_AT_LAST_PWM_CHANGE" ]; then
+  if [ -z "$TEMP_AT_LAST_PWM_CHANGE" ] || [ "$TEMP" -gt "$TEMP_AT_LAST_PWM_CHANGE" ] || [ $(($(cat $FILE_TEMP) + HYSTERESIS)) -le "$TEMP_AT_LAST_PWM_CHANGE" ]; then
     $DEBUG || echo "current temp: $TEMP"
     echo "temp at last change was $TEMP_AT_LAST_PWM_CHANGE"
     echo "changing pwm to $NEW_PWM"
