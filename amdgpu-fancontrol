@@ -100,14 +100,14 @@ function interpolate_pwm {
   done
 }
 
-function reset_on_fail {
+function reset_on_exit {
   echo "exiting, resetting fan to auto control..."
   set_fanmode 2
-  exit 1
+  exit 0
 }
 
 # always try to reset fans on exit
-trap "reset_on_fail" SIGINT SIGTERM
+trap "reset_on_exit" SIGINT SIGTERM
 
 function run_daemon {
   while :; do

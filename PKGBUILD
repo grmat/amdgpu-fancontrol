@@ -9,7 +9,7 @@ license=('GPL')
 depends=('systemd' 'bc')
 
 source=('amdgpu-fancontrol' 'amdgpu-fancontrol.service' 'etc-amdgpu-fancontrol.cfg')
-sha256sums=('c9c194c5f62915db91681b7b6d7bf94c047f7f0dc05e5709a7165f77e9f44d6c'
+sha256sums=('0bb15e514bcbbfb119ba2e2735736ae9e701c5a33422001021e4e7848e0da4e0'
             '509d5c2676ea0aa23918bebd1b4f5f0268b0a6a68a27650ce487dfb58f27e70c'
             '0a032a9fe2c1c6f985e898eb84b5ae658e08146038f44f7ed4a09400e7f06d39')
 
