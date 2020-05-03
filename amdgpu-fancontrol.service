@@ -3,6 +3,7 @@ Description=amdgpu-fancontrol
 
 [Service]
 Type=simple
+ExecStartPre=/bin/sleep 5
 ExecStart=/usr/bin/amdgpu-fancontrol
 
 [Install]
