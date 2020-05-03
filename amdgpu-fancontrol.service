@@ -1,9 +1,11 @@
 [Unit]
 Description=amdgpu-fancontrol
+After=multi-user.target rc-local.service systemd-user-sessions.service
 
 [Service]
 Type=simple
 ExecStart=/usr/bin/amdgpu-fancontrol
+StandardOutput=syslog
 
 [Install]
 WantedBy=multi-user.target
