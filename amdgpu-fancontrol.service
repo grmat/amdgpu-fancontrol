@@ -2,9 +2,9 @@
 Description=amdgpu-fancontrol
 
 [Service]
-Type=simple
-ExecStartPre=/bin/sleep 5
 ExecStart=/usr/bin/amdgpu-fancontrol
+Restart=on-failure
+RestartSec=5
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
