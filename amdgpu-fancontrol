@@ -8,17 +8,37 @@ DEBUG=true
 TEMPS=( 65000 80000 90000 )
 PWMS=(      0   153   255 )
 
-# hwmon paths, hardcoded for one amdgpu card, adjust as needed
-FILE_PWM=$(echo /sys/class/drm/card0/device/hwmon/hwmon?/pwm1)
-FILE_FANMODE=$(echo /sys/class/drm/card0/device/hwmon/hwmon?/pwm1_enable)
-FILE_TEMP=$(echo /sys/class/drm/card0/device/hwmon/hwmon?/temp1_input)
+function detect_gpu {
+  local AMDGPU_PCIE=$(lspci | grep "VGA" | grep "AMD" | head -n 1 | cut -d " " -f 1)
+
+  if [[ -n $AMDGPU_PCIE ]]; then
+    for C_NAME in $(ls /dev/dri/ | grep card); do
+      local CARD_P=$(udevadm info -n /dev/dri/$C_NAME -q path)
+      local AMDGPU_P=$(echo $CARD_P | grep $AMDGPU_PCIE/drm)
+      if [[ -n $AMDGPU_P ]]; then
+        local AMDGPU_VAL=$(echo $AMDGPU_P | rev | cut -c 1)
+      fi
+    done
+  fi
+
+  if [[ -n $AMDGPU_VAL ]]; then
+    FILE_PWM=$(echo /sys/class/drm/card$AMDGPU_VAL/device/hwmon/hwmon?/pwm1)
+    FILE_FANMODE=$(echo /sys/class/drm/card$AMDGPU_VAL/device/hwmon/hwmon?/pwm1_enable)
+    FILE_TEMP=$(echo /sys/class/drm/card$AMDGPU_VAL/device/hwmon/hwmon?/temp1_input)
+    return 0
+  else
+    FILE_PWM=
+    FILE_FANMODE=
+    FILE_TEMP=
+    return 1
+  fi
+}
+
 # might want to use this later
 #FILE_TEMP_CRIT=$(echo /sys/class/hwmon/hwmon?/temp1_crit_hyst)
 
 # load configuration file if present
 [ -f /etc/amdgpu-fancontrol.cfg ] && . /etc/amdgpu-fancontrol.cfg
-
-[[ -f "$FILE_PWM" && -f "$FILE_FANMODE" && -f "$FILE_TEMP" ]] || { echo "invalid hwmon files" ; exit 1; }
 
 # check if amount of temps and pwm values match
 if [ "${#TEMPS[@]}" -ne "${#PWMS[@]}" ]
@@ -112,14 +132,15 @@ trap "reset_on_exit" SIGINT SIGTERM
 
 function run_daemon {
   while :; do
-    interpolate_pwm
+    detect_gpu
+    local res=$?
+    if (( $res == 0 )); then
+      interpolate_pwm
+    fi
     debug
     sleep $SLEEP_INTERVAL
   done
 }
-
-# set fan control to manual
-set_fanmode 1
 
 # finally start the loop
 run_daemon
