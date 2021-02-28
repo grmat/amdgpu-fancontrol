@@ -4,6 +4,3 @@ Description=amdgpu-fancontrol
 [Service]
 Type=simple
 ExecStart=/usr/bin/amdgpu-fancontrol
-
-[Install]
-WantedBy=multi-user.target
