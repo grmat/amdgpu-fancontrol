@@ -1,6 +1,3 @@
-[Unit]
-Description=amdgpu-fancontrol
-
 [Service]
 Type=simple
 ExecStart=/usr/bin/amdgpu-fancontrol
