@@ -1,0 +1,7 @@
+[Path]
+PathExistsGlob=/sys/class/drm/card0/device/hwmon/hwmon*/pwm1
+PathExistsGlob=/sys/class/drm/card0/device/hwmon/hwmon*/pwm1_enable
+PathExistsGlob=/sys/class/drm/card0/device/hwmon/hwmon*/temp1_input
+
+[Install]
+WantedBy=default.target
